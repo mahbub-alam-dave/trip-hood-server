@@ -2,7 +2,11 @@ require('dotenv').config()
 const express = require('express')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const app = express()
+const cors = require('cors')
 const port = process.env.PORT || 3000
+
+app.use(cors())
+app.use(express.json())
 
 app.get('/', (req, res) => {
     res.send("Backend integrated successfully")
@@ -29,6 +33,14 @@ async function run() {
 
     app.post('/users', async(req, res) => {
         const userData = req.body;
+        const email = userData.email
+        const userExist = await usersCollection.findOne({email})
+
+        if(userExist) {
+          const updateUser= await usersCollection.updateOne({email}, {$set:{lastSignedIn: userData.lastSignedIn}})
+          return res.status(201).send({message: "user already exists", inserted: false})
+        }
+
         const result = await usersCollection.insertOne(userData)
         res.send(result)
     })
