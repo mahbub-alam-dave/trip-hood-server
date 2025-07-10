@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const app = express();
 const cors = require("cors");
@@ -87,6 +87,34 @@ async function run() {
       }
     });
 
+    // get guides by location
+  app.get('/guides/by-destination', async (req, res) => {
+  const destination = req.query.destination;
+  console.log(destination)
+
+  if (!destination) {
+    return res.status(400).json({ message: "Destination is required in body" });
+  }
+
+  try {
+    // Case-insensitive partial match in coverageArea array
+    const keywords = destination.split(',').map(word => word.trim());
+    const matchedGuides = await guidesCollection.find({
+      coverageArea: {
+        $elemMatch: {
+          $in: keywords
+        }
+      }
+    }).toArray();
+
+    res.json(matchedGuides);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch guides" });
+  }
+});
+
     // get guides randomly
     app.get("/guides/random", async (req, res) => {
       try {
@@ -102,6 +130,7 @@ async function run() {
     });
 
 
+
     // get random tourist story
     app.get('/stories/random', async (req, res) => {
       try {
@@ -113,6 +142,21 @@ async function run() {
         res.status(500).json({ message: "Failed to fetch stories" });
       } 
 });
+
+
+app.get('/packages/:id', async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const query = {_id: id}
+    const result = await packagesCollection.findOne(query)
+    res.json(result)
+  }
+  catch(error) {
+    console.error(error)
+    res.status(500).json({ message: "Failed to fetch tour package" });
+  }
+})
 
 
 
