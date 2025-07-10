@@ -30,6 +30,8 @@ async function run() {
 
     const usersCollection = client.db("tourHood").collection("users");
     const packagesCollection = client.db("tourHood").collection("packages");
+    const guidesCollection = client.db("tourHood").collection("guides");
+    const touristStoriesCollection = client.db("tourHood").collection("touristStories");
 
     const verifyToken = (req, res, next) => {
       const authHeader = req.headers.authorization;
@@ -81,17 +83,42 @@ async function run() {
         // console.log(randomPackages)
       } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Failed to fetch random packages" });
+        res.status(500).json({ message: "Failed to fetch packages" });
       }
     });
 
     // get guides randomly
-    app.get("/packages/random", async (req, res) => {
-      const randomPackages = await Package.aggregate([
-        { $sample: { size: 3 } },
-      ]);
-      res.json(randomPackages);
+    app.get("/guides/random", async (req, res) => {
+      try {
+      const randomGuides = await guidesCollection.aggregate([
+        { $sample: { size: 6 } },
+      ]).toArray();
+      res.json(randomGuides);
+      }
+      catch(err) {
+        console.error(err)
+        res.status(500).json({ message: "Failed to fetch guides" });
+      }
     });
+
+
+    // get random tourist story
+    app.get('/stories/random', async (req, res) => {
+      try {
+        const randomStories = await touristStoriesCollection.aggregate([{ $sample: { size: 4 } }]).toArray();
+        res.json(randomStories);
+      }
+      catch(err) {
+        console.error(err)
+        res.status(500).json({ message: "Failed to fetch stories" });
+      } 
+});
+
+
+
+
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
