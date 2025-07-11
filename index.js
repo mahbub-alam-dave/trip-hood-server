@@ -32,13 +32,14 @@ async function run() {
     const packagesCollection = client.db("tourHood").collection("packages");
     const guidesCollection = client.db("tourHood").collection("guides");
     const touristStoriesCollection = client.db("tourHood").collection("touristStories");
+    const bookingsCollection = client.db("tourHood").collection("bookings");
 
     const verifyToken = (req, res, next) => {
       const authHeader = req.headers.authorization;
       if (!authHeader) return res.status(401).send({ message: "Unauthorized" });
 
       const token = authHeader.split(" ")[1];
-      jwt.verify(token, JWT_SECRET, (err, decoded) => {
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         if (err) return res.status(403).send({ message: "Forbidden" });
 
         req.decoded = decoded;
@@ -48,7 +49,7 @@ async function run() {
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
-
+      // console.log(user)
       const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
 
       res.send({ token });
@@ -88,23 +89,30 @@ async function run() {
     });
 
     // get guides by location
-  app.get('/guides/by-destination', async (req, res) => {
-  const destination = req.query.destination;
-  console.log(destination)
+app.get('/guides/by-destination', async (req, res) => {
+  const { destination } = req.query;
 
   if (!destination) {
-    return res.status(400).json({ message: "Destination is required in body" });
+    return res.status(400).json({ message: "Destination query is required" });
   }
 
+  // Split the destination string by comma, trim spaces
+  const keywords = destination
+  .split(/[\s,]+/) // split by any comma or space(s)
+  .map(item => item.trim())
+  .filter(item => item); // remove empty strings
+
   try {
-    // Case-insensitive partial match in coverageArea array
-    const keywords = destination.split(',').map(word => word.trim());
-    const matchedGuides = await guidesCollection.find({
+    // Build $or condition with case-insensitive regex for each keyword
+    const regexConditions = keywords.map(keyword => ({
       coverageArea: {
-        $elemMatch: {
-          $in: keywords
-        }
+        $elemMatch: { $regex: keyword, $options: 'i' }
       }
+    }));
+
+
+    const matchedGuides = await guidesCollection.find({
+      $or: regexConditions
     }).toArray();
 
     res.json(matchedGuides);
@@ -114,6 +122,7 @@ async function run() {
     res.status(500).json({ message: "Failed to fetch guides" });
   }
 });
+
 
     // get guides randomly
     app.get("/guides/random", async (req, res) => {
@@ -157,6 +166,34 @@ app.get('/packages/:id', async (req, res) => {
     res.status(500).json({ message: "Failed to fetch tour package" });
   }
 })
+
+
+// tour package bookings
+app.post("/bookings", async (req, res) => {
+  try {
+    const bookingData = req.body;
+
+    // Optional: Basic validation
+    if (!bookingData.touristEmail || !bookingData.packageId) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Add extra fields like status and createdAt
+    bookingData.status = "pending";
+    bookingData.createdAt = new Date();
+
+    // Insert into bookings collection
+    const result = await bookingsCollection.insertOne(bookingData);
+
+    res.status(201).json({
+      message: "Booking placed successfully",
+      bookingId: result.insertedId,
+    });
+  } catch (error) {
+    console.error("Error placing booking:", error);
+    res.status(500).json({ message: "Failed to place booking" });
+  }
+});
 
 
 
