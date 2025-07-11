@@ -138,6 +138,29 @@ app.get('/guides/by-destination', async (req, res) => {
       }
     });
 
+    // get guide by id
+    app.get("/guides/:id", async (req, res) => {
+  const id = req.params.id;
+
+  // Validate ObjectId if your _id is Mongo ObjectId type
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid guide ID" });
+  }
+
+  try {
+    const guide = await guidesCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!guide) {
+      return res.status(404).json({ message: "Guide not found" });
+    }
+
+    res.json(guide);
+  } catch (error) {
+    console.error("Error fetching guide by ID:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
     // get random tourist story
