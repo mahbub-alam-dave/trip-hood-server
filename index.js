@@ -173,6 +173,37 @@ app.get('/guides/by-destination', async (req, res) => {
 });
 
 
+// GET approved stories with optional filters
+app.get("/stories", async (req, res) => {
+  try {
+    const { category, location, search } = req.query;
+
+    // Base query: approved stories only
+    let query = { status: "approved" };
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (location) {
+      query.location = location;
+    }
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const stories = await touristStoriesCollection.find(query).sort({ date: -1 }).toArray();
+    res.status(200).json(stories);
+  } catch (error) {
+    console.error("Error fetching stories:", error);
+    res.status(500).json({ message: "Failed to fetch stories." });
+  }
+});
+
 
     // get random tourist story
     app.get('/stories/random', async (req, res) => {
