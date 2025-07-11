@@ -74,6 +74,17 @@ async function run() {
       res.send(result);
     });
 
+    // get all tour package
+    app.get("/packages", async (req, res) => {
+  try {
+    const packages = await packagesCollection.find().toArray();
+    res.json(packages);
+  } catch (error) {
+    console.error("Error fetching packages:", error);
+    res.status(500).json({ message: "Failed to fetch packages" });
+  }
+});
+
     // get tour packages randomly
     app.get("/packages/random", async (req, res) => {
       try {
