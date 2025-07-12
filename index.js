@@ -260,6 +260,30 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
+// dashboard page 
+
+// get user data by email query
+app.get("/users/by-email/:email", async (req, res) => {
+  const email = req.params.email;
+  const user = await usersCollection.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  res.json(user);
+});
+
+// get guide data by email query
+app.get("/guides/by-email/:email", async (req, res) => {
+  const email = req.params.email;
+  const user = await usersCollection.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  res.json(user);
+});
+
+
+
 
 
 
