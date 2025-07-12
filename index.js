@@ -355,7 +355,21 @@ app.post("/guide-applications", async (req, res) => {
   }
 });
 
+// GET bookings by email
+app.get("/bookings", async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ message: "Email is required" });
 
+  const bookings = await bookingsCollection.find({ touristEmail: email }).toArray();
+  res.json(bookings);
+});
+
+// delete bookings by cancel button
+app.delete("/bookings/:id", async (req, res) => {
+  const { id } = req.params;
+  const result = await bookingsCollection.deleteOne({ _id: new ObjectId(id) });
+  res.json(result);
+});
 
 
 
