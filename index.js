@@ -33,6 +33,7 @@ async function run() {
     const guidesCollection = client.db("tourHood").collection("guides");
     const touristStoriesCollection = client.db("tourHood").collection("touristStories");
     const bookingsCollection = client.db("tourHood").collection("bookings");
+    const guideApplicationCollection = client.db("tourHood").collection("guideApplication");
 
     const verifyToken = (req, res, next) => {
       const authHeader = req.headers.authorization;
@@ -272,14 +273,86 @@ app.get("/users/by-email/:email", async (req, res) => {
   res.json(user);
 });
 
+// update user / guide / admin data
+/* app.patch("/profile/update", async (req, res) => {
+  const email = req.query.email;
+  const updatedData = req.body;
+
+  const touristUpdatedData = {name: updatedData.name, photo: updatedData.photo }
+
+  // Update users collection
+  await usersCollection.updateOne({ email }, { $set: touristUpdatedData });
+
+  // If user is a guide, update guides collection as well
+  if (updatedData.role === "tour_guide") {
+    await guidesCollection.updateOne({ email }, { $set: updatedData });
+  }
+
+  res.json({ message: "Profile updated successfully in all collections" });
+}); */
+
+app.patch("/profile/update", async (req, res) => {
+  try {
+    const { email, role, name, photo, ...rest } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    // Update user profile (only name and photo)
+    const userUpdateResult = await usersCollection.updateOne(
+      { email },
+      { $set: { name, photo } }
+    );
+
+    // If guide — update guide-specific fields
+    if (role === "tour_guide") {
+      const guideUpdateData = {
+        name,
+        photo,
+        ...rest, // coverageArea, expertise, phone etc.
+      };
+
+      await guidesCollection.updateOne({ email }, { $set: guideUpdateData });
+    }
+
+    res.json({ message: "Profile updated successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update profile." });
+  }
+});
+
+
+
 // get guide data by email query
 app.get("/guides/by-email/:email", async (req, res) => {
   const email = req.params.email;
-  const user = await usersCollection.findOne({ email });
+  const user = await guidesCollection.findOne({ email });
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
   res.json(user);
+});
+
+
+// store guide application
+app.post("/guide-applications", async (req, res) => {
+  const application = req.body;
+
+  try {
+    const result = await guideApplicationCollection
+      .insertOne({
+        ...application,
+        status: "pending",
+        appliedAt: new Date(),
+      });
+
+    res.status(201).json({ message: "Application submitted successfully.", insertedId: result.insertedId });
+  } catch (error) {
+    console.error("Error submitting guide application:", error);
+    res.status(500).json({ message: "Failed to submit application." });
+  }
 });
 
 
