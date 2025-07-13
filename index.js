@@ -5,6 +5,9 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 3000;
+const Stripe = require("stripe");
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -369,6 +372,25 @@ app.delete("/bookings/:id", async (req, res) => {
   const { id } = req.params;
   const result = await bookingsCollection.deleteOne({ _id: new ObjectId(id) });
   res.json(result);
+});
+
+// stripe payment
+stripe.post("/create-payment-intent", async (req, res) => {
+  const { price } = req.body;
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: price * 100, // amount in paisa if BDT
+      currency: "bdt",
+      payment_method_types: ["card"],
+    });
+
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
 });
 
 
