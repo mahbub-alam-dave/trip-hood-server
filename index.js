@@ -375,7 +375,7 @@ app.delete("/bookings/:id", async (req, res) => {
 });
 
 // stripe payment
-stripe.post("/create-payment-intent", async (req, res) => {
+app.post("/create-payment-intent", async (req, res) => {
   const { price } = req.body;
 
   try {
@@ -394,7 +394,34 @@ stripe.post("/create-payment-intent", async (req, res) => {
 });
 
 
+// GET booking by ID
+app.get('/bookings/:id', async (req, res) => {
+  const { id } = req.params;
 
+  try {
+    const booking = await bookingsCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    res.json(booking);
+  } catch (error) {
+    console.error('Failed to fetch booking:', error);
+    res.status(500).json({ message: 'Failed to fetch booking' });
+  }
+});
+
+
+// update bookings status
+app.patch("/bookings/pay/:id", async (req, res) => {
+  const { id } = req.params;
+  const result = await bookingsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { status: "paid" } }
+  );
+  res.json(result);
+});
 
 
 
