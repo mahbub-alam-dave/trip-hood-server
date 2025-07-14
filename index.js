@@ -37,6 +37,7 @@ async function run() {
     const touristStoriesCollection = client.db("tourHood").collection("touristStories");
     const bookingsCollection = client.db("tourHood").collection("bookings");
     const guideApplicationCollection = client.db("tourHood").collection("guideApplication");
+    const paymentsCollection = client.db("tourHood").collection("payments");
 
     const verifyToken = (req, res, next) => {
       const authHeader = req.headers.authorization;
@@ -421,6 +422,20 @@ app.patch("/bookings/pay/:id", async (req, res) => {
     { $set: { status: "paid" } }
   );
   res.json(result);
+});
+
+// store payments to server
+app.post('/payments', async (req, res) => {
+  const paymentData = req.body;
+  const result = await paymentsCollection.insertOne(paymentData)
+  res.send(result)
+})
+
+// store stories to the server
+app.post("/stories", async (req, res) => {
+  const story = req.body;
+  const result = await touristStoriesCollection.insertOne(story);
+  res.json({ insertedId: result.insertedId });
 });
 
 
