@@ -79,6 +79,14 @@ async function run() {
       res.send(result);
     });
 
+    // get users by email
+    app.get('/users/role', async (req, res) => {
+      const email = req.query.email;
+      const query = {email: email}
+      const result =  await usersCollection.findOne(query)
+      res.send(result)
+    })
+
     // get all tour package
     app.get("/packages", async (req, res) => {
   try {
@@ -419,7 +427,7 @@ app.patch("/bookings/pay/:id", async (req, res) => {
   const { id } = req.params;
   const result = await bookingsCollection.updateOne(
     { _id: new ObjectId(id) },
-    { $set: { status: "paid" } }
+    { $set: { status: "in_review" } }
   );
   res.json(result);
 });
