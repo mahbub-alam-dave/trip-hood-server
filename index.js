@@ -184,7 +184,7 @@ app.get("/stories", async (req, res) => {
     const { category, location, search } = req.query;
 
     // Base query: approved stories only
-    let query = { status: "approved" };
+    // let query = { status: "approved" };
 
     if (category) {
       query.category = category;
@@ -201,7 +201,7 @@ app.get("/stories", async (req, res) => {
       ];
     }
 
-    const stories = await touristStoriesCollection.find(query).sort({ date: -1 }).toArray();
+    const stories = await touristStoriesCollection.find().sort({ date: -1 }).toArray();
     res.status(200).json(stories);
   } catch (error) {
     console.error("Error fetching stories:", error);
@@ -438,8 +438,63 @@ app.post("/stories", async (req, res) => {
   res.json({ insertedId: result.insertedId });
 });
 
+// get stories by email
+app.get("/stories/by-email/:email", async (req, res) => {
+  const email = req.params.email;
+  const result = await touristStoriesCollection.find({ email }).toArray();
+  res.json(result);
+});
 
+// // GET: Get story by ID
+app.get("/stories/:id", async (req, res) => {
+  const { id } = req.params;
+  const story = await touristStoriesCollection.findOne({ _id: new ObjectId(id) });
+  res.send(story);
+});
 
+// detete stories
+app.delete("/stories/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await touristStoriesCollection.deleteOne({ _id: new ObjectId(id) });
+  res.json(result);
+});
+
+// PATCH: Update a story by ID
+app.patch("/stories/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { removeImages, addImages, updatedFields } = req.body;
+
+  try {
+    // Remove selected images
+    if (removeImages && removeImages.length > 0) {
+      await touristStoriesCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $pull: { images: { $in: removeImages } } }
+      );
+    }
+
+    // Add new images
+    if (addImages && addImages.length > 0) {
+      await touristStoriesCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $push: { images: { $each: addImages } } }
+      );
+    }
+
+    // Update other fields like title, description, etc.
+    if (updatedFields && Object.keys(updatedFields).length > 0) {
+      await touristStoriesCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedFields }
+      );
+    }
+
+    res.json({ message: "Story updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to update story" });
+  }
+});
 
     await client.db("admin").command({ ping: 1 });
     console.log(
