@@ -579,7 +579,31 @@ app.get("/admin/stats", async (req, res) => {
   }
 });
 
-module.exports = router;
+
+// GET /users?search=keyword&role=roleName
+app.get("/users", async (req, res) => {
+  const { search, role } = req.query;
+
+  const query = {};
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  if (role && role !== "all") {
+    query.role = role;
+  }
+
+  try {
+    const users = await usersCollection.find(query).toArray();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
 
 
 
