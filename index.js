@@ -52,6 +52,27 @@ async function run() {
       });
     };
 
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email }
+      const user = await usersCollection.findOne(query)
+      if(!user || user.role !== "admin") {
+        return res.status(403).send({message: "Forbidden Access"})
+      }
+
+      next()
+    }
+
+    const verifyGuide = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email}
+      const user = await usersCollection.findOne(query)
+      if(!user || user.role !== "tour_guide") {
+        return res.status(403).send({message: "Forbidden Access"})
+      }
+      next()
+    }
+
     app.post("/jwt", (req, res) => {
       const user = req.body;
       // console.log(user)
@@ -80,8 +101,14 @@ async function run() {
     });
 
     // get users by email
-    app.get('/users/role', async (req, res) => {
+    app.get('/users/role', verifyToken, async (req, res) => {
+
       const email = req.query.email;
+
+        if (req.decoded.email !== email) {
+    return res.status(403).send({ message: "Forbidden access" });
+  }
+
       const query = {email: email}
       const result =  await usersCollection.findOne(query)
       res.send(result)
@@ -235,7 +262,7 @@ app.get('/packages/:id', async (req, res) => {
   const id = req.params.id;
 
   try {
-    const query = {_id: id}
+    const query = {_id: new ObjectId(id)}
     const result = await packagesCollection.findOne(query)
     res.json(result)
   }
@@ -276,7 +303,7 @@ app.post("/bookings", async (req, res) => {
 // dashboard page 
 
 // get user data by email query
-app.get("/users/by-email/:email", async (req, res) => {
+app.get("/users/by-email/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
   const user = await usersCollection.findOne({ email });
   if (!user) {
@@ -338,7 +365,7 @@ app.patch("/profile/update", async (req, res) => {
 
 
 // get guide data by email query
-app.get("/guides/by-email/:email", async (req, res) => {
+app.get("/guides/by-email/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
   const user = await guidesCollection.findOne({ email });
   if (!user) {
@@ -368,7 +395,7 @@ app.post("/guide-applications", async (req, res) => {
 });
 
 // GET bookings by email
-app.get("/bookings", async (req, res) => {
+app.get("/bookings", verifyToken, async (req, res) => {
   const email = req.query.email;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
@@ -404,7 +431,7 @@ app.post("/create-payment-intent", async (req, res) => {
 
 
 // GET booking by ID
-app.get('/bookings/:id', async (req, res) => {
+app.get('/bookings/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -423,7 +450,7 @@ app.get('/bookings/:id', async (req, res) => {
 
 
 // update bookings status
-app.patch("/bookings/pay/:id", async (req, res) => {
+app.patch("/bookings/pay/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const result = await bookingsCollection.updateOne(
     { _id: new ObjectId(id) },
@@ -433,7 +460,7 @@ app.patch("/bookings/pay/:id", async (req, res) => {
 });
 
 // store payments to server
-app.post('/payments', async (req, res) => {
+app.post('/payments', verifyToken, async (req, res) => {
   const paymentData = req.body;
   const result = await paymentsCollection.insertOne(paymentData)
   res.send(result)
@@ -447,21 +474,21 @@ app.post("/stories", async (req, res) => {
 });
 
 // get stories by email
-app.get("/stories/by-email/:email", async (req, res) => {
+app.get("/stories/by-email/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
   const result = await touristStoriesCollection.find({ email }).toArray();
   res.json(result);
 });
 
 // // GET: Get story by ID
-app.get("/stories/:id", async (req, res) => {
+app.get("/stories/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const story = await touristStoriesCollection.findOne({ _id: new ObjectId(id) });
   res.send(story);
 });
 
 // detete stories
-app.delete("/stories/:id", async (req, res) => {
+app.delete("/stories/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   const result = await touristStoriesCollection.deleteOne({ _id: new ObjectId(id) });
   res.json(result);
@@ -505,7 +532,7 @@ app.patch("/stories/update/:id", async (req, res) => {
 });
 
 // get my assigned tours for (tour guides) by email
-app.get("/assigned-tours", async (req, res) => {
+app.get("/assigned-tours", verifyToken, verifyGuide, async (req, res) => {
   const { guideEmail } = req.query;
   const bookings = await bookingsCollection.find({ guideEmail }).toArray();
   res.send(bookings);
@@ -534,15 +561,7 @@ app.post('/packages', async (req, res) => {
 
 
 // get all data for admin profile section
-// server/routes/admin.js or wherever your route is set
-
-const express = require("express");
-const router = express.Router();
-const { ObjectId } = require("mongodb");
-
-// Assuming these collections are already initialized
-
-app.get("/admin/stats", async (req, res) => {
+app.get("/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
   try {
     const [
       totalPayments,
@@ -581,7 +600,7 @@ app.get("/admin/stats", async (req, res) => {
 
 
 // GET /users?search=keyword&role=roleName
-app.get("/users", async (req, res) => {
+/* app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
   const { search, role } = req.query;
 
   const query = {};
@@ -602,7 +621,77 @@ app.get("/users", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch users" });
   }
+}); */
+
+// Backend (Express + MongoDB)
+app.get('/users', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const search = req.query.search || "";
+  const role = req.query.role || "all";
+
+  const filter = {
+    $and: [
+      role === "all" ? {} : { role },
+      {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      }
+    ]
+  };
+
+  const total = await usersCollection.countDocuments(filter);
+  const users = await usersCollection
+    .find(filter)
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .toArray();
+
+  res.send({
+    users,
+    total
+  });
 });
+
+
+// get application for becoming guide
+app.get("/guide-applications", verifyToken, verifyAdmin, async (req, res) => {
+  const applications = await guideApplicationCollection.find().toArray();
+  res.json(applications);
+});
+
+// accept application by updating role and delete application
+app.post("/guide-applications/accept/:id", async (req, res) => {
+  const { id } = req.params;
+  const applicationData = req.body;
+
+  const newGuideData = {
+    name: applicationData.name,
+    email: applicationData.email,
+    status: "active"
+  }
+
+  await guidesCollection.insertOne(newGuideData)
+
+  await usersCollection.updateOne(
+    { email: applicationData.email },
+    { $set: { role: "tour_guide" } }
+  );
+
+  await guideApplicationCollection.deleteOne({ _id: new ObjectId(id) });
+
+  res.json({ message: "Application accepted" });
+});
+
+
+app.delete("/guide-applications/reject/:id", async (req, res) => {
+  await guideApplicationCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+  res.json({ message: "Application rejected" });
+});
+
+
 
 
 
