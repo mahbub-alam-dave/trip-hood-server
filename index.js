@@ -504,6 +504,85 @@ app.patch("/stories/update/:id", async (req, res) => {
   }
 });
 
+// get my assigned tours for (tour guides) by email
+app.get("/assigned-tours", async (req, res) => {
+  const { guideEmail } = req.query;
+  const bookings = await bookingsCollection.find({ guideEmail }).toArray();
+  res.send(bookings);
+});
+
+// update booking status
+app.patch("/assigned-tours/status/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const result = await bookingsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { status } }
+  );
+
+  res.send(result);
+});
+
+
+// add package to database 
+app.post('/packages', async (req, res) => {
+  const packageData = req.body
+  const result = await packagesCollection.insertOne(packageData)
+  res.send(result)
+})
+
+
+// get all data for admin profile section
+// server/routes/admin.js or wherever your route is set
+
+const express = require("express");
+const router = express.Router();
+const { ObjectId } = require("mongodb");
+
+// Assuming these collections are already initialized
+
+app.get("/admin/stats", async (req, res) => {
+  try {
+    const [
+      totalPayments,
+      totalTourGuides,
+      totalTourists,
+      totalPackages,
+      totalStories,
+    ] = await Promise.all([
+      paymentsCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" },
+          },
+        },
+      ]).toArray(),
+
+      usersCollection.countDocuments({ role: "tour_guide" }),
+      usersCollection.countDocuments({ role: "tourist" }),
+      packagesCollection.countDocuments(),
+      touristStoriesCollection.countDocuments(),
+    ]);
+
+    res.json({
+      totalPayments: totalPayments[0]?.total || 0,
+      totalTourGuides,
+      totalTourists,
+      totalPackages,
+      totalStories,
+    });
+  } catch (error) {
+    console.error("Admin stats error:", error);
+    res.status(500).json({ error: "Failed to fetch admin stats" });
+  }
+});
+
+module.exports = router;
+
+
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
