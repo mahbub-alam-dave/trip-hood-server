@@ -3,7 +3,7 @@
 Trip Hood is a tourist guide web application designed for the travel enthusiast looking for safe tour management. We have different travel packages available for the travelers of Bangladesh. Any user who is looking to visit any popular tourist spot can easily find our trip packages on our application. Users can book any package, and they also have the option to select guides by themselves, and visit any guide's profile. Users need to pay via Visa card to confirm booking. Any logged-in user can apply to become a tour guide by submitting necessary information. Our Admin can review applications and have the right to accept or reject any application. There is also an individual and secured dashboard for users with roles like tourist (by default), tour_guide, and admin. Very soon, a lot more functionality will be added.
 
 ## Live Site
-- URL: https://www.triphood.com (Placeholder URL)
+- URL: https://tour-hood-project.web.app/
 
 ## Admin Credentials
 - email: mahbubasw@gmail.com
