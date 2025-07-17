@@ -147,23 +147,23 @@ app.get('/guides/by-destination', async (req, res) => {
     return res.status(400).json({ message: "Destination query is required" });
   }
 
-  // Split the destination string by comma, trim spaces
   const keywords = destination
-  .split(/[\s,]+/) // split by any comma or space(s)
-  .map(item => item.trim())
-  .filter(item => item); // remove empty strings
+    .split(/[\s,]+/)
+    .map(item => item.trim())
+    .filter(item => item);
 
   try {
-    // Build $or condition with case-insensitive regex for each keyword
     const regexConditions = keywords.map(keyword => ({
       coverageArea: {
         $elemMatch: { $regex: keyword, $options: 'i' }
       }
     }));
 
-
     const matchedGuides = await guidesCollection.find({
-      $or: regexConditions
+      $and: [
+        { status: "active" },
+        { $or: regexConditions }
+      ]
     }).toArray();
 
     res.json(matchedGuides);
@@ -179,6 +179,7 @@ app.get('/guides/by-destination', async (req, res) => {
     app.get("/guides/random", async (req, res) => {
       try {
       const randomGuides = await guidesCollection.aggregate([
+        { $match: { status: "active" } },
         { $sample: { size: 6 } },
       ]).toArray();
       res.json(randomGuides);
@@ -670,7 +671,20 @@ app.post("/guide-applications/accept/:id", async (req, res) => {
   const newGuideData = {
     name: applicationData.name,
     email: applicationData.email,
-    status: "active"
+    photo: applicationData.photo,
+    status: "pending",
+    age: 0,
+    experience: 0,
+    nationalId: '',
+    phone: "",
+    coverageArea: [],
+    description: "",
+    expertise: [],
+    language: [],
+    rating: 0,
+    reviews: 0
+
+
   }
 
   await guidesCollection.insertOne(newGuideData)
@@ -696,7 +710,7 @@ app.delete("/guide-applications/reject/:id", async (req, res) => {
 
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
