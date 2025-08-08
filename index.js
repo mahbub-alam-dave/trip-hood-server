@@ -38,6 +38,7 @@ async function run() {
     const bookingsCollection = client.db("tourHood").collection("bookings");
     const guideApplicationCollection = client.db("tourHood").collection("guideApplication");
     const paymentsCollection = client.db("tourHood").collection("payments");
+    const tourPlansCollection = client.db("tourHood").collection("customTourPlans");
 
     const verifyToken = (req, res, next) => {
       const authHeader = req.headers.authorization;
@@ -72,6 +73,34 @@ async function run() {
       }
       next()
     }
+
+  app.get("/search-package", async (req, res) => {
+  const destination = req.query.destination
+  const query = destination
+    ? { destination: { $regex: destination, $options: "i" } } // case-insensitive
+    : {};
+
+  const packages = await packagesCollection.find(query).toArray();
+  res.json(packages);
+});
+
+app.post("/custom-tour-requests", async (req, res) => {
+  const { userId, email, plan, createdAt } = req.body;
+
+  if (!email || !plan) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const result = await tourPlansCollection.insertOne({
+    userId,
+    email,
+    plan,
+    createdAt: createdAt || new Date(),
+    status: "pending",
+  });
+
+  res.status(201).json(result);
+});
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
