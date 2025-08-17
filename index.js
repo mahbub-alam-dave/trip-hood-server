@@ -144,10 +144,30 @@ app.post("/custom-tour-requests", async (req, res) => {
     })
 
     // get all tour package
-    app.get("/packages", async (req, res) => {
+  app.get("/packages", async (req, res) => {
+    let {page = 1, limit = 5} = req.query;
+    // console.log(page, limit)
+    page = parseInt(page)
+    limit = parseInt(limit)
+
+
   try {
-    const packages = await packagesCollection.find().toArray();
-    res.json(packages);
+    // const packages = await packagesCollection.find().toArray();
+    // Count total for pagination
+    const totalPackages = await packagesCollection.countDocuments();
+
+        // Fetch paginated data
+    const packages = await packagesCollection.find()
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .toArray();
+
+    res.json({
+      packages,
+      totalPages: Math.ceil(totalPackages / limit),
+      currentPage: page,
+      totalPackages,
+    });
   } catch (error) {
     console.error("Error fetching packages:", error);
     res.status(500).json({ message: "Failed to fetch packages" });
