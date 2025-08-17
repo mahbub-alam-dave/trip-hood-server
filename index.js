@@ -145,19 +145,31 @@ app.post("/custom-tour-requests", async (req, res) => {
 
     // get all tour package
   app.get("/packages", async (req, res) => {
-    let {page = 1, limit = 5} = req.query;
+    let {page = 1, limit = 5, category, searchQuery} = req.query;
     // console.log(page, limit)
     page = parseInt(page)
     limit = parseInt(limit)
+
+    const filter = {};
+
+    // Category filter
+    if (category && category.trim() !== "" && category !== "All") {
+      filter.type = category;
+    }
+
+    // Search filter
+    if (searchQuery && searchQuery.trim() !== "") {
+      filter.title = { $regex: searchQuery, $options: "i" };
+    }
 
 
   try {
     // const packages = await packagesCollection.find().toArray();
     // Count total for pagination
-    const totalPackages = await packagesCollection.countDocuments();
+    const totalPackages = await packagesCollection.countDocuments(filter);
 
         // Fetch paginated data
-    const packages = await packagesCollection.find()
+    const packages = await packagesCollection.find(filter)
       .skip((page - 1) * limit)
       .limit(limit)
       .toArray();
